@@ -1,7 +1,8 @@
 package ui
 
 import (
-	"forza-horizon-5-telemetry/shared/packettypes"
+	"forza-horizon-5-telemetry/shared/packethandling"
+
 	"github.com/rivo/tview"
 )
 
@@ -17,6 +18,6 @@ func CreateDebugView() *tview.TextView {
 	return debugView
 }
 
-func UpdateDebugView(debugView *tview.TextView, data packettypes.ForzaHorizon5Packet) {
-	debugView.SetText(packettypes.FormatStruct(data))
+func UpdateDebugView(debugView *tview.TextView, data packethandling.ForzaHorizon5Packet) {
+	debugView.SetText(packethandling.FormatStruct(data))
 }

@@ -2,7 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"forza-horizon-5-telemetry/shared/packettypes"
+	"forza-horizon-5-telemetry/shared/packethandling"
 	"strings"
 
 	"github.com/rivo/tview"
@@ -16,7 +16,7 @@ func CreateInfoPanel() *tview.TextView {
 	return tv
 }
 
-func UpdateLeftInfoPanel(panel *tview.TextView, dash packettypes.ForzaHorizon5Packet) {
+func UpdateLeftInfoPanel(panel *tview.TextView, dash packethandling.ForzaHorizon5Packet) {
 	var sb strings.Builder
 
 	sb.WriteString("[yellow]Car Information[white]\n")
@@ -30,7 +30,7 @@ func UpdateLeftInfoPanel(panel *tview.TextView, dash packettypes.ForzaHorizon5Pa
 	panel.SetText(sb.String())
 }
 
-func UpdateRightInfoPanel(panel *tview.TextView, dash packettypes.ForzaHorizon5Packet) {
+func UpdateRightInfoPanel(panel *tview.TextView, dash packethandling.ForzaHorizon5Packet) {
 	var sb strings.Builder
 
 	sb.WriteString("[yellow]Race Information[white]\n")

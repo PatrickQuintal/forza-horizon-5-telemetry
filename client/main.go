@@ -1,24 +1,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"forza-horizon-5-telemetry/client/ui"
-	"forza-horizon-5-telemetry/shared/packettypes"
+	"forza-horizon-5-telemetry/debugtools/debugstreamreader"
+	"forza-horizon-5-telemetry/shared/packethandling"
 	"time"
 
 	//"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"log"
-	"net"
+
+	"github.com/rivo/tview"
 )
 
 const (
-	meterWidth              = 50 // Total segments in the meter
-	greenSegments           = 30 // Number of green segments before color transition starts
 	defaultUpdatesPerSecond = 10 // Default update rate
 )
 
 func main() {
+	debugMode := flag.Bool("debug", false, "Use debug stream instead of UDP")
+	debugFile := flag.String("debugfile", "debugstream", "Path to debug stream file")
+	flag.Parse()
+
 	app := tview.NewApplication()
 
 	// Create main flex container (vertical)
@@ -94,24 +98,37 @@ func main() {
 	defer ticker.Stop()
 
 	go func() {
+		var readPacket func() ([]byte, error)
 
-		addr := net.UDPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 9999,
+		if *debugMode {
+			reader, err := debugstreamreader.NewDebugStreamReader(*debugFile, 324)
+			if err != nil {
+				log.Fatal(err)
+			}
+			readPacket = reader.ReadNext
+		} else {
+
+			conn, err := packethandling.Setup("127.0.0.1", 9999)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer conn.Close()
+
+			buf := make([]byte, 1024)
+			readPacket = func() ([]byte, error) {
+				n, _, err := conn.ReadFromUDP(buf)
+				if err != nil {
+					return nil, err
+				}
+				return buf[:n], nil
+			}
+
 		}
-
-		conn, err := net.ListenUDP("udp", &addr)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
-
-		buf := make([]byte, 1024)
-		var lastDash packettypes.ForzaHorizon5Packet
+		var fh5Packet packethandling.ForzaHorizon5Packet
 
 		for {
 
-			n, _, err := conn.ReadFromUDP(buf)
+			data, err := readPacket()
 			if err != nil {
 				app.QueueUpdateDraw(func() {
 					textView.SetText(fmt.Sprintf("Read error: %v", err))
@@ -119,8 +136,7 @@ func main() {
 				return
 			}
 
-			var dash packettypes.ForzaHorizon5Packet
-			err = packettypes.ParsePacket(buf[:n], &dash)
+			err = packethandling.ParsePacket(data, &fh5Packet)
 			if err != nil {
 				app.QueueUpdateDraw(func() {
 					textView.SetText(fmt.Sprintf("Error parsing packet: %v", err))
@@ -128,22 +144,19 @@ func main() {
 				return
 			}
 
-			// Store the latest data
-			lastDash = dash
-
 			// Wait for ticker before updating UI
 			select {
 			case <-ticker.C:
 
 				app.QueueUpdateDraw(func() {
 					if !isDebugView {
-						ui.UpdateRPMMeter(rpmMeter, lastDash.GetCurrentEngineRpm(), lastDash.GetEngineMaxRpm())
-						ui.UpdateSpeedometer(speedometer, lastDash.GetSpeedKMH())
-						ui.UpdateLeftInfoPanel(leftInfoPanel, lastDash)
-						ui.UpdateRightInfoPanel(rightInfoPanel, lastDash)
+						ui.UpdateRPMMeter(rpmMeter, fh5Packet.GetCurrentEngineRpm(), fh5Packet.GetEngineMaxRpm())
+						ui.UpdateSpeedometer(speedometer, fh5Packet.GetSpeedKMH())
+						ui.UpdateLeftInfoPanel(leftInfoPanel, fh5Packet)
+						ui.UpdateRightInfoPanel(rightInfoPanel, fh5Packet)
 					} else {
 						// Update debug view
-						ui.UpdateDebugView(debugView, lastDash)
+						ui.UpdateDebugView(debugView, fh5Packet)
 					}
 				})
 

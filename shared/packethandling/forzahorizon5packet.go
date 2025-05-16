@@ -1,4 +1,4 @@
-package packettypes
+package packethandling
 
 import "math"
 
@@ -109,12 +109,12 @@ func (d *ForzaHorizon5Packet) GetSpeed() float32 {
 
 // GetSpeedKMH returns the current speed in kilometers per hour (rounded down)
 func (d *ForzaHorizon5Packet) GetSpeedKMH() float32 {
-	return float32(math.Floor(float64(d.Speed * 3.6)))
+	return float32(math.Floor(float64(d.Speed * 3.6))) // 1 m/s = 3.6 km/h
 }
 
 // GetSpeedMPH returns the current speed in miles per hour (rounded down)
 func (d *ForzaHorizon5Packet) GetSpeedMPH() float32 {
-	return float32(math.Floor(float64(d.Speed * 2.237)))
+	return float32(math.Floor(float64(d.Speed * 2.237))) // 1 m/s = 2.237 mph
 }
 
 // GetCurrentEngineRpm returns the current engine RPM (rounded down)
@@ -134,7 +134,7 @@ func (d *ForzaHorizon5Packet) GetEngineIdleRpm() float32 {
 
 // GetPower returns the current power output (rounded down)
 func (d *ForzaHorizon5Packet) GetPower() float32 {
-	return float32(math.Floor(float64(d.Power)))
+	return float32(math.Floor(float64(d.Power) / 745.699872)) // Convert Watts to Horsepower apparently? Thanks copilot.
 }
 
 // GetTorque returns the current torque (rounded down)
